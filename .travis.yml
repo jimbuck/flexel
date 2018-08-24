@@ -1,0 +1,12 @@
+language: node_js
+node_js:
+  - "node"
+  - "8"
+  - "6"
+after_success: npm run coverage
+# deploy:
+#   provider: npm
+#   api_key: < travis encrypt YOUR_API_KEY --add deploy.api_key  >
+#   skip_cleanup: true
+#   on:
+#     tags: true
