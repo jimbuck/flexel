@@ -1,6 +1,40 @@
-
 export interface Database {
-  get<TValue>(key: string): Promise<TValue>;
-  set<TValue>(key: string, value: TValue): Promise<TValue>;
-  del(key: string): Promise<void>;
+  get<TValue>(key: any): Promise<TValue>;
+  set<TValue>(key: any, value: TValue): Promise<TValue>;
+  del(key: any): Promise<void>;
+  createReadStream(options?: ReadStreamOptions): NodeJS.ReadableStream;
+  sub(namespace: string): Database;
+  queue<TQueueType>(namespace: string): Queue<TQueueType>;
+  stack<TStackType>(namespace: string): Stack<TStackType>;
+}
+
+export interface StreamItem<T> {
+  key: any;
+  value: T;
+}
+
+export interface IteratorOptions {
+  gt?: number;
+  lt?: number;
+  reverse?: boolean;
+  limit?: number;
+}
+
+export interface ReadStreamOptions extends IteratorOptions {
+  keys?: boolean;
+  values?: boolean;
+}
+
+export interface Queue<T> {
+  enqueue(item: T): Promise<T>;
+  dequeue(): Promise<T>;
+  peek(): Promise<T>;
+  empty(): Promise<void>;
+}
+
+export interface Stack<T> {
+  push(item: T): Promise<T>;
+  pop(): Promise<T>;
+  peek(): Promise<T>;
+  empty(): Promise<void>;
 }

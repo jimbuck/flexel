@@ -1,7 +1,10 @@
-import { Database } from './models';
-import { guid } from './utils';
 
-export class LevelQueue<T> {
+const toArray = require('stream-to-array');
+
+import { Database, Queue, StreamItem } from './models';
+import { dePromise, getTime, streamForEach } from './utils';
+
+export class LevelQueue<T> implements Queue<T> {
   
   private _db: Database;
 
@@ -10,82 +13,40 @@ export class LevelQueue<T> {
   }
 
   public async enqueue(item: T): Promise<T> {
-    const { headId, tailId } = await this._getMeta();
-
-    let newTailId = guid();
-    await this._db.set<QueueEntry<T>>(newTailId, { item });
-    
-    let tailEntry = await this._db.get<QueueEntry<T>>(tailId);
-    tailEntry.nextId = newTailId;
-
-    await this._db.set(tailId, tailEntry);    
-    
-    await this._setMeta({ headId, tailId: newTailId });
+    const newId = getTime();
+    await this._db.set<T>(newId, item);
 
     return item;
   }
 
   public async dequeue(): Promise<T> {
-    const { headId, tailId } = await this._getMeta();
+    const { key, value } = await this._peek();
+   
+    if (key === null) return null;
 
-    let headEntry = await this._db.get<QueueEntry<T>>(headId);
-    await this._db.del(headId);
-
-    await this._setMeta({ headId: headEntry.nextId, tailId });
+    await this._db.del(key);
     
-    return headEntry.item;
+    return value;
   }
 
   public async peek(): Promise<T> {
-    let { headId } = await this._getMeta();
-    let headEntry = await this._db.get<QueueEntry<T>>(headId);
-
-    return headEntry.item;
+    const { value } = await this._peek();
+    return value;
   }
 
-  public async empty(): Promise<T> {
-    return null;
+  public async empty(): Promise<void> {
+    await streamForEach<StreamItem<T>>(this._db.createReadStream(), item => this._db.del(item.key));
   }
 
-  private _getMeta(): Promise<QueueHeader> {
-    return this._db.get<QueueHeader>('meta');
-  }
-  private async _setMeta(data: QueueHeader): Promise<void> {
-    await this._db.set('meta', data);
-  }
-}
+  private async _peek(): Promise<StreamItem<T>> {
+    const stream = this._db.createReadStream({ limit: 1 });
 
-interface QueueHeader {
-  headId?: string;
-  tailId?: string;  
-}
+    try {
+      const [headItem] = await toArray(stream) as Array<StreamItem<T>>;
 
-interface QueueEntry<T> {
-  item: T;
-  nextId?: string;
-}
-
-export class MemQueue<T> {
-  private _items: Array<T>;
-
-  constructor(items: Array<T> = []) {
-    this._items = items;
-  }
-
-  public enqueue(item: T): T {
-    this._items.push(item);
-    return item;
-  }
-
-  public dequeue(): T {
-    return this._items.shift();
-  }
-
-  public peek(): T {
-    return this._items[0];
-  }
-
-  public empty(): void {
-    this._items = [];
+      return headItem;
+    } catch (err) {
+      return { key: null, value: null };
+    }
   }
 }
