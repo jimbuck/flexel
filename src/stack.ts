@@ -1,4 +1,7 @@
-import { Database } from './models';
+const toArray = require('stream-to-array');
+
+import { Database, StreamItem } from './models';
+import { streamForEach, getTime } from './utils';
 
 export class LevelStack<T> {
 
@@ -9,45 +12,40 @@ export class LevelStack<T> {
   }
 
   public async push(item: T): Promise<T> {
-    // TODO: Implement
+    const newId = getTime();
+    await this._db.set<T>(newId, item);
 
     return item;
   }
 
   public async pop(): Promise<T> {
-    return null;
+    const { key, value } = await this._peek();
+
+    if (key === null) return null;
+
+    await this._db.del(key);
+
+    return value;
   }
 
   public async peek(): Promise<T> {
-    return null;
+    const { value } = await this._peek();
+    return value;
   }
 
   public async empty(): Promise<void> {
-    return null;
-  }
-}
-
-export class MemStack<T> {
-  private _items: Array<T>;
-
-  constructor(items: Array<T> = []) {
-    this._items = items;
+    await streamForEach<StreamItem<T>>(this._db.createReadStream(), item => this._db.del(item.key));
   }
 
-  public push(item: T): T {
-    this._items.unshift(item);
-    return item;
-  }
+  private async _peek(): Promise<StreamItem<T>> {
+    const stream = this._db.createReadStream({ limit: 1, reverse: true });
 
-  public pop(): T {
-    return this._items.shift();
-  }
+    try {
+      const [headItem] = await toArray(stream) as Array<StreamItem<T>>;
 
-  public peek(): T {
-    return this._items[0];
-  }
-
-  public empty(): void {
-    this._items = [];
+      return headItem;
+    } catch (err) {
+      return { key: null, value: null };
+    }
   }
 }
