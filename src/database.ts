@@ -6,6 +6,7 @@ import { LevelUp } from 'levelup';
 import { Database, ReadStreamOptions } from './models';
 import { LevelQueue } from './queue';
 import { LevelStack } from './stack';
+import { advancedJsonEncoding } from './utils';
 
 export class LevelDatabase implements Database {
   
@@ -59,7 +60,7 @@ export class LevelDatabase implements Database {
   }
 
   public sub(namespace: string): LevelDatabase {
-    let sub = sublevel(this._db, namespace, { valueEncoding: 'json' });
+    let sub = sublevel(this._db, namespace, { valueEncoding: advancedJsonEncoding });
     return new LevelDatabase(sub);
   }
 

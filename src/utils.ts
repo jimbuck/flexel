@@ -31,3 +31,20 @@ export async function streamForEach<T>(stream: NodeJS.ReadableStream, action: (i
 
   await Promise.all([streamDone, actionsDone]);
 }
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+function dateReviver(key: string, value: any) {
+  if (typeof value === 'string' && DATE_REGEX.test(value)) {
+    //console.log(`DATE: |${value}|`);
+    return new Date(value);
+  }
+
+  return value;
+}
+
+export const advancedJsonEncoding = {
+  encode: JSON.stringify,
+  decode: (json: string) => JSON.parse(json, dateReviver),
+  buffer: false,
+  type: 'advanced-json'
+};

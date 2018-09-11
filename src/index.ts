@@ -9,7 +9,7 @@ export * from './queue';
 export * from './stack';
 export * from './models';
 
-import { createLogger } from './utils';
+import { createLogger, advancedJsonEncoding } from './utils';
 
 const logger = createLogger('flexel');
 
@@ -30,16 +30,16 @@ export function flexel(path: string): LevelDatabase;
  *
  * @param {LevelUp} db The levelup instance.
  */
-export function flexel(db: LevelUp): LevelDatabase
+export function flexel(db: LevelUp): LevelDatabase;
 export function flexel(path?: LevelUp|string) : LevelDatabase {
   let db: LevelUp;
 
   if (!path) {
     logger(`Creating in-memory database...`);
-    db = levelmem(null, { valueEncoding: 'json' });
+    db = levelmem(null, { valueEncoding: advancedJsonEncoding });
   } else if (typeof path === 'string') {
     logger(`Creating/Loading database at "${path}"...`);
-    db = level(path, { valueEncoding: 'json' });
+    db = level(path, { valueEncoding: advancedJsonEncoding });
   } else {
     logger(`Using provided database...`);
     db = path;
