@@ -5,6 +5,7 @@ import { flexel } from '.';
 
 interface BasicTestData {
   name: string;
+  purchased: string; // (fake date)
   count: number;
 }
 
@@ -50,7 +51,7 @@ test('Correctly handles dates', async t => {
   const TARGET_KEY = 'objectWithDate';
   const db = flexel();
   for (let i = 0; i < 10000; i++) {
-    const EXPECTED_VALUE: ComplexTestData = randomOutlaw();
+    const [EXPECTED_VALUE] = randomComplex(1);
     await db.set(TARGET_KEY, EXPECTED_VALUE);
     const actualValue = await db.get<ComplexTestData>(TARGET_KEY);
 
@@ -62,9 +63,7 @@ test(`Creates filo queue`, async (t) => {
   const db = flexel();
   const queue = db.queue<BasicTestData>('filo');
 
-  const ITEM_1 = { name: 'apples', count: 10 };
-  const ITEM_2 = { name: 'bananas', count: 20 };
-  const ITEM_3 = { name: 'canteen', count: 3 };
+  const [ITEM_1, ITEM_2, ITEM_3] = randomSimple(3);
 
   await queue.enqueue(ITEM_1);
   await queue.enqueue(ITEM_2);
@@ -80,8 +79,7 @@ test(`Queue can peek`, async (t) => {
   const db = flexel();
   const queue = db.queue<BasicTestData>('filo');
 
-  const ITEM_1 = { name: 'apples', count: 10 };
-  const ITEM_2 = { name: 'bananas', count: 20 };
+  const [ITEM_1, ITEM_2] = randomSimple(2);
 
   await queue.enqueue(ITEM_1);
   await queue.enqueue(ITEM_2);
@@ -105,9 +103,7 @@ test(`Creates fifo stack`, async (t) => {
   const db = flexel();
   const queue = db.stack<BasicTestData>('filo');
 
-  const ITEM_1 = { name: 'apples', count: 10 };
-  const ITEM_2 = { name: 'bananas', count: 20 };
-  const ITEM_3 = { name: 'canteen', count: 3 };
+  const [ITEM_1, ITEM_2, ITEM_3] = randomSimple(3);
 
   await queue.push(ITEM_1);
   await queue.push(ITEM_2);
@@ -123,8 +119,7 @@ test(`Stack can peek`, async (t) => {
   const db = flexel();
   const queue = db.stack<BasicTestData>('filo');
 
-  const ITEM_1 = { name: 'apples', count: 10 };
-  const ITEM_2 = { name: 'bananas', count: 20 };
+  const [ITEM_1, ITEM_2] = randomSimple(2);
 
   await queue.push(ITEM_1);
   await queue.push(ITEM_2);
@@ -162,8 +157,16 @@ function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * range) + min;
 }
 
-function randomOutlaw(): ComplexTestData {
-  return {
+function randomSimple(count: number): Array<BasicTestData> {
+  return Array(count).fill(0).map(_ => ({
+    name: randomString(),
+    purchased: randomDate().toISOString(),
+    count: randomInt(1, 20)
+  }));
+}
+
+function randomComplex(count: number): Array<ComplexTestData> {
+  return Array(count).fill(0).map(_ => ({
     name: randomString(),
     wanted: randomBool(),
     dateOfBirth: randomDate(),
@@ -171,10 +174,7 @@ function randomOutlaw(): ComplexTestData {
     inventory: {
       name: randomString(),
       size: randomInt(1, 10),
-      items: Array(randomInt(1, 3)).fill(0).map(_ => ({
-        name: randomString(),
-        count: randomInt(1, 20)
-      }))
+      items: randomSimple(randomInt(1, 3))
     }
-  };
+  }));
 }

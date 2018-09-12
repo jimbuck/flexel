@@ -1,9 +1,40 @@
 {
-  // See https://go.microsoft.com/fwlink/?LinkId=733558
-  // for the documentation about the tasks.json format
-  "version": "0.1.0",
-  "command": "gulp",
-  "isShellCommand": true,
-  "args": ["--color"],
-  "showOutput": "always"
+	// See https://go.microsoft.com/fwlink/?LinkId=733558
+	// for the documentation about the tasks.json format
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "watch",
+			"command": "tsc",
+			"args": [
+				"--watch"
+			],
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "typescript",
+				"fileLocation": "relative",
+				"pattern": {
+					"regexp": "^([^\\s].*):(\\d+:\\d+) - (error|warning|info)\\s+(TS\\d+): (.*)$",
+					"file": 1,
+					"location": 2,
+					"severity": 3,
+					"code": 4,
+					"message": 5
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "^\\s*\\[\\d{1,2}:\\d{1,2}:\\d{1,2}\\]\\s*File change detected\\. Starting incremental compilation\\.\\.\\.",
+					"endsPattern": "^\\s*\\[\\d{1,2}:\\d{1,2}:\\d{1,2}\\]\\s*Found \\d+ errors\\. Watching for file changes\\."
+				}
+			}
+		}
+	]
 }
