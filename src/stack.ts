@@ -1,13 +1,13 @@
 const toArray = require('stream-to-array');
 
-import { Database, StreamItem } from './models';
+import { AbstractDatabase, StreamItem } from './models';
 import { streamForEach, getTime } from './utils';
 
-export class LevelStack<T> {
+export class FlexelStack<T> {
 
-  private _db: Database;
+  private _db: AbstractDatabase;
 
-  constructor(db: Database) {
+  constructor(db: AbstractDatabase) {
     this._db = db;
   }
 

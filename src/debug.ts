@@ -1,8 +1,8 @@
 const level = require('level');
-import { flexel } from '.';
+import { FlexelDatabase } from '.';
 
 (async function () {
-  let db = flexel(level());
+	let db = new FlexelDatabase(level());
 
   let sub1 = db.sub('test');
 

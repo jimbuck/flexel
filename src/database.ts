@@ -1,76 +1,115 @@
+import { LevelUp, LevelUpConstructor } from 'levelup';
+const level: LevelUpConstructor = require('level');
+const levelmem = require('level-mem');
+
 type SublevelFactory = (db: LevelUp, namespace: string, opts?: {}) => LevelUp;
-
 const sublevel: SublevelFactory = require('subleveldown');
-import { LevelUp } from 'levelup';
 
-import { Database, ReadStreamOptions } from './models';
-import { LevelQueue } from './queue';
-import { LevelStack } from './stack';
-import { advancedJsonEncoding } from './utils';
+import { AbstractDatabase, ReadStreamOptions } from './models';
+import { FlexelQueue } from './queue';
+import { FlexelStack } from './stack';
+import { advancedJsonEncoding, createLogger } from './utils';
 
-export class LevelDatabase implements Database {
-  
-  private _db: LevelUp;
+const logger = createLogger('flexel');
 
-  constructor(db: LevelUp) {
-    this._db = db;
-  }
+export class FlexelDatabase implements AbstractDatabase {
 
-  public async get<TValue>(key: any): Promise<TValue> {
-    return new Promise<TValue>((resolve, reject) => {
-      this._db.get(key, (err, value) => {
-        if (err) {
-          if (err.notFound) return resolve(null);
-          return reject(err);
-        }
-        resolve(value);
-      });
-    });
-  }
+	private _db: LevelUp;
 
-  public async set<TValue>(key: any, value: TValue): Promise<TValue> {
-    return new Promise<TValue>((resolve, reject) => {
-      this._db.put(key, value, (err) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(value);
-      });
-    });
-  }
+	/**
+	 * Creates a flexel instance from an in-memory leveldown store.
+	 */
+	constructor();
+	/**
+	 * Creates a flexel instance from the path to a leveldown store.
+	 *
+	 * @param {string} path The path to the database.
+	 */
+	constructor(path: string);
+	/**
+	 * Creates a flexel instance using the provided LevelUp instance.
+	 *
+	 * @param {LevelUp} db The levelup instance.
+	 */
+	constructor(db: LevelUp);
 
-  public async del(key: any): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      this._db.del(key, (err) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve();
-      });
-    });
-  }
+	constructor(path?: LevelUp | string) {
+		if (!new.target) return new FlexelDatabase(path as any);
+		let db: LevelUp;
 
-  public createReadStream(options?: ReadStreamOptions): NodeJS.ReadableStream {
-    return this._db.createReadStream(Object.assign({
-      reverse: false,
-      limit: -1,
-      keys: true,
-      values: true
-    }, options)) as NodeJS.ReadableStream;
-  }
+		if (!path) {
+			logger(`Creating in-memory database...`);
+			db = levelmem(null, { valueEncoding: advancedJsonEncoding });
+		} else if (typeof path === 'string') {
+			logger(`Creating/Loading database at "${path}"...`);
+			db = level(path, { valueEncoding: advancedJsonEncoding });
+		} else {
+			logger(`Using provided database...`);
+			db = path;
+		}
 
-  public sub(namespace: string): LevelDatabase {
-    let sub = sublevel(this._db, namespace, { valueEncoding: advancedJsonEncoding });
-    return new LevelDatabase(sub);
-  }
+		if (!(db && db.get && db.put && db.del && db.createReadStream)) {
+			throw new Error('Flexel requires a LevelUp instance!');
+		}
 
-  public queue<T>(namespace: string): LevelQueue<T> {
-    let sub = this.sub(namespace);
-    return new LevelQueue<T>(sub);
-  }
+		this._db = db;
+	}
 
-  public stack<T>(namespace: string): LevelStack<T> {
-    let sub = this.sub(namespace);
-    return new LevelStack<T>(sub);
-  }
+	public async get<TValue>(key: any): Promise<TValue> {
+		return new Promise<TValue>((resolve, reject) => {
+			this._db.get(key, (err, value) => {
+				if (err) {
+					if (err.notFound) return resolve(null);
+					return reject(err);
+				}
+				resolve(value);
+			});
+		});
+	}
+
+	public async set<TValue>(key: any, value: TValue): Promise<TValue> {
+		return new Promise<TValue>((resolve, reject) => {
+			this._db.put(key, value, (err) => {
+				if (err) {
+					return reject(err);
+				}
+				resolve(value);
+			});
+		});
+	}
+
+	public async del(key: any): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			this._db.del(key, (err) => {
+				if (err) {
+					return reject(err);
+				}
+				resolve();
+			});
+		});
+	}
+
+	public createReadStream(options?: ReadStreamOptions): NodeJS.ReadableStream {
+		return this._db.createReadStream(Object.assign({
+			reverse: false,
+			limit: -1,
+			keys: true,
+			values: true
+		}, options)) as NodeJS.ReadableStream;
+	}
+
+	public sub(namespace: string): FlexelDatabase {
+		let sub = sublevel(this._db, namespace, { valueEncoding: advancedJsonEncoding });
+		return new FlexelDatabase(sub);
+	}
+
+	public queue<T>(namespace: string): FlexelQueue<T> {
+		let sub = this.sub(namespace);
+		return new FlexelQueue<T>(sub);
+	}
+
+	public stack<T>(namespace: string): FlexelStack<T> {
+		let sub = this.sub(namespace);
+		return new FlexelStack<T>(sub);
+	}
 }

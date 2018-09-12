@@ -17,23 +17,31 @@ _Short Description_
 ## Example:
 
 ```ts
-import flexel from 'flexel';
+import Flexel from 'flexel';
 
-// Example goes here...
+const db = new Flexel(); // in memory
+const db = new Flexel('/path/to/db'); // on disk
+const db = new Flexel(someLevelUpInstance); // custom levelup instance (use any leveldown store)
 
+await db.put('project', someObject);
+let result = await db.get('project'); // returns someObject
+
+db.createReadStream().pipe(/* ... */) // Same options as Level.
+
+const subDB = db.sub('subarea'); // sublevel instance
+const queue = db.queue('queueNamespace'); // async enqueue, dequeue, peek
+const stack = db.stack('stackNamespace'); // async push, pop, peek
 ```
 
 
 ## Features:
- - Feature #1
- - Feature #2
- - Feature #3
+ - _Coming soon_
  
 ## Contribute
  
  0. Fork it
  1. `npm i`
- 2. `gulp watch`
+ 2. `npm run watch`
  3. Make changes and **write tests**.
  4. Send pull request! :sunglasses:
  

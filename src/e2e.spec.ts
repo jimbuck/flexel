@@ -1,7 +1,6 @@
-import { performance } from 'perf_hooks';
 import { test } from 'ava';
 
-import { flexel } from '.';
+import FlexelDatabase from '.';
 
 interface BasicTestData {
   name: string;
@@ -22,7 +21,7 @@ interface ComplexTestData {
 }
 
 test(`Get and set values`, async (t) => {
-  const db = flexel();
+  const db = new FlexelDatabase();
 
   const KEY = 'name';
   const EXPECTED_VALUE = 'jim';
@@ -41,7 +40,7 @@ test(`Get and set values`, async (t) => {
 });
 
 test(`Creates sublevel`, t => {
-  const db = flexel();
+  const db = new FlexelDatabase();
   const sub = db.sub('fifo');
   t.truthy(sub);
   t.truthy(sub.get && sub.set && sub.del && sub.sub);
@@ -49,7 +48,7 @@ test(`Creates sublevel`, t => {
 
 test('Correctly handles dates', async t => {
   const TARGET_KEY = 'objectWithDate';
-  const db = flexel();
+  const db = new FlexelDatabase();
   for (let i = 0; i < 10000; i++) {
     const [EXPECTED_VALUE] = randomComplex(1);
     await db.set(TARGET_KEY, EXPECTED_VALUE);
@@ -60,7 +59,7 @@ test('Correctly handles dates', async t => {
 });
 
 test(`Creates filo queue`, async (t) => {
-  const db = flexel();
+  const db = new FlexelDatabase();
   const queue = db.queue<BasicTestData>('filo');
 
   const [ITEM_1, ITEM_2, ITEM_3] = randomSimple(3);
@@ -76,7 +75,7 @@ test(`Creates filo queue`, async (t) => {
 });
 
 test(`Queue can peek`, async (t) => {
-  const db = flexel();
+  const db = new FlexelDatabase();
   const queue = db.queue<BasicTestData>('filo');
 
   const [ITEM_1, ITEM_2] = randomSimple(2);
@@ -100,7 +99,7 @@ test(`Queue can peek`, async (t) => {
 });
 
 test(`Creates fifo stack`, async (t) => {
-  const db = flexel();
+  const db = new FlexelDatabase();
   const queue = db.stack<BasicTestData>('filo');
 
   const [ITEM_1, ITEM_2, ITEM_3] = randomSimple(3);
@@ -116,7 +115,7 @@ test(`Creates fifo stack`, async (t) => {
 });
 
 test(`Stack can peek`, async (t) => {
-  const db = flexel();
+  const db = new FlexelDatabase();
   const queue = db.stack<BasicTestData>('filo');
 
   const [ITEM_1, ITEM_2] = randomSimple(2);

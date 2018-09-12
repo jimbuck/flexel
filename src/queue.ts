@@ -1,14 +1,14 @@
 
 const toArray = require('stream-to-array');
 
-import { Database, Queue, StreamItem } from './models';
-import { dePromise, getTime, streamForEach } from './utils';
+import { AbstractDatabase, AbstractQueue, StreamItem } from './models';
+import { getTime, streamForEach } from './utils';
 
-export class LevelQueue<T> implements Queue<T> {
+export class FlexelQueue<T> implements AbstractQueue<T> {
   
-  private _db: Database;
+  private _db: AbstractDatabase;
 
-  constructor(db: Database) {
+  constructor(db: AbstractDatabase) {
     this._db = db;
   }
 
