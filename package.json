@@ -30,7 +30,6 @@
   "devDependencies": {
     "@types/debug": "0.0.30",
     "@types/leveldown": "^1.7.1",
-    "@types/levelup": "0.0.30",
     "@types/node": "^10.7.1",
     "ava": "^0.25.0",
     "concurrently": "^3.6.1",
@@ -40,6 +39,7 @@
     "typescript": "^3.0.1"
   },
   "dependencies": {
+		"@types/levelup": "0.0.30",
     "debug": "^3.1.0",
     "level": "^4.0.0",
     "level-mem": "^3.0.1",
@@ -55,6 +55,11 @@
     ]
   },
   "nyc": {
+		"cache": true,
+		"reporter": [
+      "lcov",
+      "text"
+    ],
     "include": [
       "dist/**/*.js"
     ],
