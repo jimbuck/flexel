@@ -14,7 +14,7 @@ export class FlexelQueue<T> implements AbstractQueue<T> {
 
 	public async enqueue(item: T): Promise<T> {
 		const newId = getTime();
-		await this._db.set<T>(newId, item);
+		await this._db.put<T>(newId, item);
 
 		return item;
 	}

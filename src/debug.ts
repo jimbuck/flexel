@@ -6,7 +6,7 @@ import { FlexelDatabase } from '.';
 
 	let sub1 = db.sub('test');
 
-	await sub1.set('name', 'World');
+	await sub1.put('name', 'World');
 
 	let stack1 = sub1.stack<number>('stack-a');
 	let stack2 = sub1.stack<boolean>('stack-b');

@@ -13,7 +13,7 @@ export class FlexelStack<T> {
 
 	public async push(item: T): Promise<T> {
 		const newId = getTime();
-		await this._db.set<T>(newId, item);
+		await this._db.put<T>(newId, item);
 
 		return item;
 	}

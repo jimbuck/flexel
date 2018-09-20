@@ -67,7 +67,7 @@ export class FlexelDatabase implements AbstractDatabase {
 		});
 	}
 
-	public async set<TValue>(key: any, value: TValue): Promise<TValue> {
+	public async put<TValue>(key: any, value: TValue): Promise<TValue> {
 		return new Promise<TValue>((resolve, reject) => {
 			this._db.put(key, value, (err) => {
 				if (err) {

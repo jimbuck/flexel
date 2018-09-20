@@ -1,7 +1,8 @@
+import { LevelUp } from 'levelup';
 
 export interface AbstractDatabase {
 	get<TValue>(key: any): Promise<TValue>;
-	set<TValue>(key: any, value: TValue): Promise<TValue>;
+	put<TValue>(key: any, value: TValue): Promise<TValue>;
 	del(key: any): Promise<void>;
 	createReadStream(options?: ReadStreamOptions): NodeJS.ReadableStream;
 	sub(namespace: string): AbstractDatabase;

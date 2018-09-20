@@ -26,7 +26,7 @@ test(`Get and set values`, async (t) => {
 	const KEY = 'name';
 	const EXPECTED_VALUE = 'jim';
 
-	await db.set(KEY, EXPECTED_VALUE);
+	await db.put(KEY, EXPECTED_VALUE);
 
 	const actualValue = await db.get<string>(KEY);
 
@@ -43,7 +43,7 @@ test(`Creates sublevel`, t => {
 	const db = new FlexelDatabase();
 	const sub = db.sub('fifo');
 	t.truthy(sub);
-	t.truthy(sub.get && sub.set && sub.del && sub.sub);
+	t.truthy(sub.get && sub.put && sub.del && sub.sub);
 });
 
 test('Correctly handles dates', async t => {
@@ -51,7 +51,7 @@ test('Correctly handles dates', async t => {
 	const db = new FlexelDatabase();
 	for (let i = 0; i < 10000; i++) {
 		const [EXPECTED_VALUE] = randomComplex(1);
-		await db.set(TARGET_KEY, EXPECTED_VALUE);
+		await db.put(TARGET_KEY, EXPECTED_VALUE);
 		const actualValue = await db.get<ComplexTestData>(TARGET_KEY);
 
 		t.deepEqual(actualValue, EXPECTED_VALUE);

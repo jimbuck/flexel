@@ -5,5 +5,6 @@ export * from './queue';
 export * from './stack';
 export * from './models';
 export { FlexelDatabase };
+export { LevelUp } from 'levelup';
 	
 export default FlexelDatabase;
