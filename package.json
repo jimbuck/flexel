@@ -1,6 +1,6 @@
 {
 	"name": "flexel",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"description": "Create specialized data structures from level, just like sublevel.",
 	"main": "index.js",
 	"types": "./dist/index.d.ts",
