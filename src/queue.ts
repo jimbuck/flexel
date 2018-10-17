@@ -1,8 +1,6 @@
 
-const toArray = require('stream-to-array');
-
-import { AbstractDatabase, AbstractQueue, StreamItem } from './models';
-import { getTime, streamForEach } from './utils';
+import { AbstractDatabase, AbstractQueue, StreamItem, Query } from './models';
+import { getTime, streamForEach, streamToArray } from './utils';
 
 export class FlexelQueue<T> implements AbstractQueue<T> {
 	
@@ -34,15 +32,25 @@ export class FlexelQueue<T> implements AbstractQueue<T> {
 		return value;
 	}
 
+	public async count() {
+		let results = await this.query({});
+		
+		return results.length;
+	}
+
+	public query(query: Query<T>): Promise<T[]> {
+		return this._db.query(query);
+	}
+
 	public async empty(): Promise<void> {
-		await streamForEach<StreamItem<T>>(this._db.createReadStream(), item => this._db.del(item.key));
+		await streamForEach<T>(this._db.createReadStream(), item => this._db.del(item.key));
 	}
 
 	private async _peek(): Promise<StreamItem<T>> {
 		const stream = this._db.createReadStream({ limit: 1 });
 
 		try {
-			const [headItem] = await toArray(stream) as Array<StreamItem<T>>;
+			const [headItem] = await streamToArray<T>(stream);
 
 			return headItem;
 		} catch (err) {

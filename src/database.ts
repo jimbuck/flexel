@@ -8,6 +8,7 @@ type SublevelFactory = (db: LevelUp, namespace: string, opts?: {}) => LevelUp;
 const sublevel: SublevelFactory = require('subleveldown');
 
 import { AbstractDatabase, ReadStreamOptions, Query } from './models';
+import { FlexelTable } from './table';
 import { FlexelQueue } from './queue';
 import { FlexelStack } from './stack';
 import { advancedJsonEncoding, createLogger } from './utils';
@@ -120,6 +121,11 @@ export class FlexelDatabase implements AbstractDatabase {
 	public sub(namespace: string): FlexelDatabase {
 		let sub = sublevel(this._db, namespace, { valueEncoding: advancedJsonEncoding });
 		return new FlexelDatabase(sub);
+	}
+
+	public table<T>(namespace: string, key: Extract<keyof T, string>) {
+		let sub = this.sub(namespace);
+		return new FlexelTable<T>(sub, key);
 	}
 
 	public queue<T>(namespace: string): FlexelQueue<T> {

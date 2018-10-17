@@ -6,6 +6,7 @@ interface BasicTestData {
 	name: string;
 	purchased: string; // (fake date)
 	count: number;
+	enabled: boolean;
 }
 
 interface ComplexTestData {
@@ -98,6 +99,21 @@ test(`Queue can peek`, async (t) => {
 	t.deepEqual(peek2, ITEM_2);
 });
 
+test(`Queue can query and empty`, async (t) => {
+	const db = new FlexelDatabase();
+	const queue = db.queue<BasicTestData>('filo');
+
+	const items = randomSimple(100);
+
+	for(let item of items) await queue.enqueue(item);
+	
+	let highCount = await queue.query({ count: { $gt: 10 } });
+	t.true(highCount.length > 0);
+	t.true(highCount.every(x => x.count > 10));
+
+	await queue.empty();
+});
+
 test(`Creates fifo stack`, async (t) => {
 	const db = new FlexelDatabase();
 	const queue = db.stack<BasicTestData>('filo');
@@ -138,6 +154,81 @@ test(`Stack can peek`, async (t) => {
 	t.deepEqual(peek2, ITEM_1);
 });
 
+test(`Table provides static typing`, async (t) => {
+	const fillCount = 1000;
+	const db = new FlexelDatabase();
+	const table = db.table<BasicTestData>('table-test', 'name');
+
+	const items = randomSimple(fillCount);
+	const [item1, item2] = items;
+
+	for (let item of items) {
+		await table.put(item);
+	}
+
+	let all = await table.get();
+	t.is(all.length, fillCount);
+
+	let current = await table.get(item1.name);
+	t.deepEqual(current, item1);
+
+	await table.del(item2.name);
+	let missing = await table.get(item2.name);
+	t.is(missing, null);
+	await table.put(item2);
+	let notMissing = await table.get(item2.name);
+	t.deepEqual(notMissing, item2);
+
+	let noQuery = await table.query({});
+	t.is(noQuery.length, fillCount);
+});
+
+test(`Supports mongodb queries`, async t => {
+	const fillCount = 20;
+	const db = new FlexelDatabase();
+	const table = db.table<BasicTestData>('table-test', 'name');
+
+	const items = randomSimple(fillCount);
+
+	for (let item of items) {
+		await table.put(item);
+	}
+
+	let all = await table.get();
+	t.is(all.length, fillCount);
+
+	let allEnabled = await table.query({ enabled: true });
+	t.true(allEnabled.length > 0);
+	t.true(allEnabled.every(x => x.enabled));
+
+	let enabledAndHighCount = await table.query({ enabled: true, count: { $gt: 10 } });
+	t.true(enabledAndHighCount.length > 0);
+	t.true(enabledAndHighCount.every(x => x.enabled && x.count > 10));
+});
+
+test(`Supports complex $and queries`, async t => {
+	const fillCount = 20;
+	const db = new FlexelDatabase();
+	const table = db.table<BasicTestData>('table-test', 'name');
+
+	const items = randomSimple(fillCount);
+
+	for (let item of items) {
+		await table.put(item);
+	}
+
+	let all = await table.get();
+	t.is(all.length, fillCount);
+
+	let midCount = await table.query({ $and: [{ count: { $gt: 7 } }, { count: { $lte: 14 } }] });
+	t.true(midCount.length > 0);
+	t.true(midCount.every(x => x.count > 7 && x.count <= 14));
+	
+	midCount = await table.query({ count: { $gt: 7, $lte: 14 } });
+	t.true(midCount.length > 0);
+	t.true(midCount.every(x => x.count > 7 && x.count <= 14));
+});
+
 function randomDate() {
 	let ms = Math.floor(Math.random() * 200000000) - 100000000;
 	return new Date(ms);
@@ -160,7 +251,8 @@ function randomSimple(count: number): Array<BasicTestData> {
 	return Array(count).fill(0).map(_ => ({
 		name: randomString(),
 		purchased: randomDate().toISOString(),
-		count: randomInt(1, 20)
+		count: randomInt(1, 20),
+		enabled: randomBool()
 	}));
 }
 

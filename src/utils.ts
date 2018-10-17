@@ -1,5 +1,7 @@
 const debug = require('debug');
+const toArray = require('stream-to-array');
 
+import { StreamItem } from './models';
 
 export function createLogger(namespace: string): (msg: string) => void {
 	return debug(namespace);
@@ -20,7 +22,7 @@ export function dePromise() {
 	return { promise, resolve, reject };
 }
 
-export async function streamForEach<T>(stream: NodeJS.ReadableStream, action: (item: T) => any): Promise<void> {
+export async function streamForEach<T>(stream: NodeJS.ReadableStream, action: (item: StreamItem<T>) => any): Promise<void> {
 	let actionsDone = Promise.resolve();
 	const { promise: streamDone, resolve: streamDoneResolve, reject: streamDoneReject } = dePromise();
 
@@ -30,6 +32,10 @@ export async function streamForEach<T>(stream: NodeJS.ReadableStream, action: (i
 	stream.resume();
 
 	await Promise.all([streamDone, actionsDone]);
+}
+
+export function streamToArray<T>(stream: NodeJS.ReadableStream) {
+	return toArray(stream) as Array<StreamItem<T>>
 }
 
 const DATE_REGEX = /^FLEXEL\|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
