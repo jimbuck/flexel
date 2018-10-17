@@ -1,16 +1,22 @@
 import { AbstractDatabase, StreamItem, AbstractStack, Query } from './models';
-import { streamForEach, getTime, streamToArray } from './utils';
+import { streamForEach, getTime, streamToArray, createLogger, Logger } from './utils';
+
+const defaultLogger = createLogger('stack');
 
 export class FlexelStack<T> implements AbstractStack<T> {
 
 	private _db: AbstractDatabase;
+	protected _log: Logger;
 
-	constructor(db: AbstractDatabase) {
+	constructor(db: AbstractDatabase, logger?: Logger) {
 		this._db = db;
+		
+		this._log = logger || defaultLogger;
 	}
 
 	public async push(item: T): Promise<T> {
 		const newId = getTime();
+		this._log(`Pushing item ${newId}`);
 		await this._db.put<T>(newId, item);
 
 		return item;
@@ -21,12 +27,14 @@ export class FlexelStack<T> implements AbstractStack<T> {
 
 		if (key === null) return null;
 
+		this._log(`Popping item ${key}`);
 		await this._db.del(key);
 
 		return value;
 	}
 
 	public async peek(): Promise<T> {
+		this._log(`Peeking...`);
 		const { value } = await this._peek();
 		return value;
 	}
@@ -38,10 +46,12 @@ export class FlexelStack<T> implements AbstractStack<T> {
 	}
 
 	public query(query: Query<T>): Promise<T[]> {
+		this._log(`Querying: ${JSON.stringify(query)}`);
 		return this._db.query(query);
 	}
 
 	public async empty(): Promise<void> {
+		this._log(`Emptying queue!`);
 		await streamForEach<T>(this._db.createReadStream(), item => this._db.del(item.key));
 	}
 

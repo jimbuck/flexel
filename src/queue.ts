@@ -1,17 +1,22 @@
 
 import { AbstractDatabase, AbstractQueue, StreamItem, Query } from './models';
-import { getTime, streamForEach, streamToArray } from './utils';
+import { getTime, streamForEach, streamToArray, createLogger, Logger } from './utils';
+
+const defaultLogger = createLogger('queue');
 
 export class FlexelQueue<T> implements AbstractQueue<T> {
 	
 	private _db: AbstractDatabase;
+	protected _log: Logger;
 
-	constructor(db: AbstractDatabase) {
+	constructor(db: AbstractDatabase, logger?: Logger) {
 		this._db = db;
+		this._log = logger || defaultLogger;
 	}
 
 	public async enqueue(item: T): Promise<T> {
 		const newId = getTime();
+		this._log(`Enqueuing item ${newId}`);
 		await this._db.put<T>(newId, item);
 
 		return item;
@@ -21,13 +26,15 @@ export class FlexelQueue<T> implements AbstractQueue<T> {
 		const { key, value } = await this._peek();
 	 
 		if (key === null) return null;
-
+		
+		this._log(`Dequeuing item ${key}`);
 		await this._db.del(key);
 		
 		return value;
 	}
 
 	public async peek(): Promise<T> {
+		this._log(`Peeking...`);
 		const { value } = await this._peek();
 		return value;
 	}
@@ -39,10 +46,12 @@ export class FlexelQueue<T> implements AbstractQueue<T> {
 	}
 
 	public query(query: Query<T>): Promise<T[]> {
+		this._log(`Querying: ${JSON.stringify(query)}`);
 		return this._db.query(query);
 	}
 
 	public async empty(): Promise<void> {
+		this._log(`Emptying queue!`);
 		await streamForEach<T>(this._db.createReadStream(), item => this._db.del(item.key));
 	}
 

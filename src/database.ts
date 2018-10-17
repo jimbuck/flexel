@@ -11,18 +11,23 @@ import { AbstractDatabase, ReadStreamOptions, Query } from './models';
 import { FlexelTable } from './table';
 import { FlexelQueue } from './queue';
 import { FlexelStack } from './stack';
-import { advancedJsonEncoding, createLogger } from './utils';
+import { advancedJsonEncoding, createLogger, Logger, isLogger } from './utils';
 
-const logger = createLogger('flexel');
+const defaultLogger = createLogger('database');
 
 export class FlexelDatabase implements AbstractDatabase {
 
 	private _db: LevelUp;
+	protected _log: Logger;
 
 	/**
 	 * Creates a flexel instance from an in-memory leveldown store.
 	 */
 	constructor();
+	/**
+	 * Creates a flexel instance from an in-memory leveldown store.
+	 */
+	constructor(logger: Logger);
 	/**
 	 * Creates a flexel instance from the path to a leveldown store.
 	 *
@@ -30,25 +35,37 @@ export class FlexelDatabase implements AbstractDatabase {
 	 */
 	constructor(path: string);
 	/**
+	 * Creates a flexel instance from the path to a leveldown store.
+	 *
+	 * @param {string} path The path to the database.
+	 */
+	constructor(path: string, logger: Logger);
+	/**
 	 * Creates a flexel instance using the provided LevelUp instance.
 	 *
 	 * @param {LevelUp} db The levelup instance.
 	 */
 	constructor(db: LevelUp);
 
-	constructor(path?: LevelUp | string) {
-		if (!new.target) return new FlexelDatabase(path as any);
+	constructor(path?: LevelUp | string | Logger, logger?: Logger) {
+		if (!new.target) return new FlexelDatabase(path as any, logger);
+	
+		if (isLogger(path)) {
+			logger = path;
+			path = null;
+		}
+		this._log = defaultLogger || logger;
 		let db: LevelUp;
 
 		if (!path) {
-			logger(`Creating in-memory database...`);
+			this._log(`Creating in-memory database...`);
 			db = levelmem(null, { valueEncoding: advancedJsonEncoding });
 		} else if (typeof path === 'string') {
-			logger(`Creating/Loading database at "${path}"...`);
+			this._log(`Creating/Loading database at "${path}"...`);
 			db = level(path, { valueEncoding: advancedJsonEncoding });
 		} else {
-			logger(`Using provided database...`);
-			db = path;
+			this._log(`Using provided database...`);
+			db = path as any;
 		}
 
 		if (!(db && db.get && db.put && db.del && db.createReadStream)) {
@@ -66,6 +83,7 @@ export class FlexelDatabase implements AbstractDatabase {
 			this._db.get(key, (err, value) => {
 				if (err) {
 					if (err.notFound) return resolve(null);
+					this._log(`get error: ${err}`);
 					return reject(err);
 				}
 				resolve(value);
@@ -77,6 +95,7 @@ export class FlexelDatabase implements AbstractDatabase {
 		return new Promise<TValue>((resolve, reject) => {
 			this._db.put(key, value, (err) => {
 				if (err) {
+					this._log(`put error: ${err}`);
 					return reject(err);
 				}
 				resolve(value);
@@ -88,6 +107,7 @@ export class FlexelDatabase implements AbstractDatabase {
 		return new Promise<void>((resolve, reject) => {
 			this._db.del(key, (err) => {
 				if (err) {
+					this._log(`del error: ${err}`);
 					return reject(err);
 				}
 				resolve();
@@ -105,7 +125,10 @@ export class FlexelDatabase implements AbstractDatabase {
 					results.push(item);
 				})
 				.on('end', () => resolve(results))
-				.on('error', reject);
+				.on('error', (err: any) => {
+					this._log(`query error: ${err}`);
+					reject(err);
+				});
 		});
 	}
 
@@ -120,21 +143,25 @@ export class FlexelDatabase implements AbstractDatabase {
 
 	public sub(namespace: string): FlexelDatabase {
 		let sub = sublevel(this._db, namespace, { valueEncoding: advancedJsonEncoding });
+		this._log(`Creating sub ${namespace}`);
 		return new FlexelDatabase(sub);
 	}
 
 	public table<T>(namespace: string, key: Extract<keyof T, string>) {
 		let sub = this.sub(namespace);
+		this._log(`Creating table ${namespace} with key ${key}`);
 		return new FlexelTable<T>(sub, key);
 	}
 
 	public queue<T>(namespace: string): FlexelQueue<T> {
 		let sub = this.sub(namespace);
+		this._log(`Creating queue ${namespace}`);
 		return new FlexelQueue<T>(sub);
 	}
 
 	public stack<T>(namespace: string): FlexelStack<T> {
 		let sub = this.sub(namespace);
+		this._log(`Creating stack ${namespace}`);
 		return new FlexelStack<T>(sub);
 	}
 }

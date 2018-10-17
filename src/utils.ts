@@ -3,8 +3,14 @@ const toArray = require('stream-to-array');
 
 import { StreamItem } from './models';
 
-export function createLogger(namespace: string): (msg: string) => void {
-	return debug(namespace);
+export type Logger = (msg: string) => void;
+
+export function createLogger(namespace: string): Logger {
+	return debug(`flexel:${namespace}`);
+}
+
+export function isLogger<T>(fn: T | Logger): fn is Logger {
+	return typeof fn === 'function';
 }
 
 export function getTime(): number {
