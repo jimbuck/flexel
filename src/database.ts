@@ -1,11 +1,13 @@
 import { LevelUp, LevelUpConstructor } from 'levelup';
 const level: LevelUpConstructor = require('level');
 const levelmem = require('level-mem');
+const levelQuery = require('level-queryengine');
+const jsonQueryEngine = require('jsonquery-engine');
 
 type SublevelFactory = (db: LevelUp, namespace: string, opts?: {}) => LevelUp;
 const sublevel: SublevelFactory = require('subleveldown');
 
-import { AbstractDatabase, ReadStreamOptions } from './models';
+import { AbstractDatabase, ReadStreamOptions, Query } from './models';
 import { FlexelQueue } from './queue';
 import { FlexelStack } from './stack';
 import { advancedJsonEncoding, createLogger } from './utils';
@@ -52,6 +54,9 @@ export class FlexelDatabase implements AbstractDatabase {
 			throw new Error('Flexel requires a LevelUp instance!');
 		}
 
+		db = levelQuery(db);
+		(db as any).query.use(jsonQueryEngine());
+
 		this._db = db;
 	}
 
@@ -86,6 +91,20 @@ export class FlexelDatabase implements AbstractDatabase {
 				}
 				resolve();
 			});
+		});
+	}
+
+	public query<T>(query: Query<T>): Promise<T[]> {
+		return new Promise<T[]>((resolve, reject) => {
+			let results: T[] = [];
+			(this._db as any).query(query)
+				.on('data', (item: T) => {
+					if (typeof item === 'undefined' || item === null) return;
+					
+					results.push(item);
+				})
+				.on('end', () => resolve(results))
+				.on('error', reject);
 		});
 	}
 
