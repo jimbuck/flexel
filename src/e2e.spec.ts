@@ -319,7 +319,7 @@ function onDiskDb(path?: string, logger?: debug.IDebugger) {
 }
 
 function getFilePath() {
-	return basetempDbPath + (Math.floor(Math.random() * 9000) + 1000);
+	return basetempDbPath + (Math.floor(Math.random() * 900000) + 100000);
 }
 
 function randomDate() {
