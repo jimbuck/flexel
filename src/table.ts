@@ -40,6 +40,10 @@ export class FlexelTable<TItem> implements AbstractTable<TItem> {
 		await this._db.del(key);
 	}
 
+	public async empty(): Promise<void> {
+		await this._db.empty();
+	}
+
 	public async count() {
 		let results = await this.query({});
 		

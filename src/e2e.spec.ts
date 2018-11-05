@@ -1,6 +1,13 @@
-import { test } from 'ava';
+import { join as joinPath } from 'path';
+import { test, GenericTestContext, Context } from 'ava';
+import debug = require('debug');
 
 import FlexelDatabase from '.';
+import { LevelUp } from 'levelup';
+
+const basetempDbPath = joinPath(__dirname, '../temp/db-');
+
+type DbFactory = () => FlexelDatabase;
 
 interface BasicTestData {
 	name: string;
@@ -21,8 +28,57 @@ interface ComplexTestData {
 	}
 }
 
-test(`Get and set values`, async (t) => {
-	const db = new FlexelDatabase();
+test(`Accepts various constructors`, t => {
+	const logger = debug('flexel-tests');
+	const fakeDb = {} as LevelUp;
+
+	t.notThrows(() => new FlexelDatabase());
+	t.notThrows(() => new FlexelDatabase(logger));
+	t.notThrows(() => new FlexelDatabase(getFilePath()));
+	t.notThrows(() => new FlexelDatabase(getFilePath(), logger));
+	t.throws(() => new FlexelDatabase(fakeDb));
+	t.throws(() => new FlexelDatabase(fakeDb, logger));
+});
+
+test(`InMem  - Get and set values`, getSetTest, inMemDb);
+test(`OnDisk - Get and set values`, getSetTest, onDiskDb);
+
+test(`InMem  - Creates sublevel`, createSublevelTest, inMemDb);
+test(`OnDisk - Creates sublevel`, createSublevelTest, onDiskDb);
+
+test(`InMem  - Correctly handles dates`, handleDatesTest, inMemDb);
+test(`OnDisk - Correctly handles dates`, handleDatesTest, onDiskDb);
+
+test(`InMem  - Creates filo queue`, createQueueTest, inMemDb);
+test(`OnDisk - Creates filo queue`, createQueueTest, onDiskDb);
+
+test(`InMem  - Queue can peek`, queuePeekTest, inMemDb);
+test(`OnDisk - Queue can peek`, queuePeekTest, onDiskDb);
+
+test(`InMem  - Queue can query and empty`, queueQueryEmptyTest, inMemDb);
+test(`OnDisk - Queue can query and empty`, queueQueryEmptyTest, onDiskDb);
+
+test(`InMem  - Creates fifo stack`, createStackTest, inMemDb);
+test(`OnDisk - Creates fifo stack`, createStackTest, onDiskDb);
+
+test(`InMem  - Stack can peek`, stackPeekTest, inMemDb);
+test(`OnDisk - Stack can peek`, stackPeekTest, onDiskDb);
+
+test(`InMem  - Stack can query and empty`, stackQueryEmptyTest, inMemDb);
+test(`OnDisk - Stack can query and empty`, stackQueryEmptyTest, onDiskDb);
+
+test(`InMem  - Table provides static typing`, tableStaticTypingTest, inMemDb);
+test(`OnDisk - Table provides static typing`, tableStaticTypingTest, onDiskDb);
+
+test(`InMem  - Supports simple queries`, simpleQueryTest, inMemDb);
+test(`OnDisk - Supports simple queries`, simpleQueryTest, onDiskDb);
+
+test(`InMem  - Supports complex $and queries`, complexQueryTest, inMemDb);
+test(`OnDisk - Supports complex $and queries`, complexQueryTest, onDiskDb);
+
+
+async function getSetTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 
 	const KEY = 'name';
 	const EXPECTED_VALUE = 'jim';
@@ -38,18 +94,18 @@ test(`Get and set values`, async (t) => {
 	const missingValue = await db.get<string>(KEY);
 
 	t.is(missingValue, null);
-});
+}
 
-test(`Creates sublevel`, t => {
-	const db = new FlexelDatabase();
+function createSublevelTest(t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 	const sub = db.sub('fifo');
 	t.truthy(sub);
 	t.truthy(sub.get && sub.put && sub.del && sub.sub);
-});
+}
 
-test('Correctly handles dates', async t => {
+async function handleDatesTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 	const TARGET_KEY = 'objectWithDate';
-	const db = new FlexelDatabase();
 	for (let i = 0; i < 10000; i++) {
 		const [EXPECTED_VALUE] = randomComplex(1);
 		await db.put(TARGET_KEY, EXPECTED_VALUE);
@@ -57,10 +113,10 @@ test('Correctly handles dates', async t => {
 
 		t.deepEqual(actualValue, EXPECTED_VALUE);
 	}
-});
+}
 
-test(`Creates filo queue`, async (t) => {
-	const db = new FlexelDatabase();
+async function createQueueTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 	const queue = db.queue<BasicTestData>('filo');
 
 	const [ITEM_1, ITEM_2, ITEM_3] = randomSimple(3);
@@ -73,10 +129,10 @@ test(`Creates filo queue`, async (t) => {
 	
 	t.deepEqual(first, ITEM_1);
 	t.deepEqual(second, ITEM_2);
-});
+}
 
-test(`Queue can peek`, async (t) => {
-	const db = new FlexelDatabase();
+async function queuePeekTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 	const queue = db.queue<BasicTestData>('filo');
 
 	const [ITEM_1, ITEM_2] = randomSimple(2);
@@ -97,41 +153,48 @@ test(`Queue can peek`, async (t) => {
 
 	t.deepEqual(peek1, ITEM_2);
 	t.deepEqual(peek2, ITEM_2);
-});
+}
 
-test(`Queue can query and empty`, async (t) => {
-	const db = new FlexelDatabase();
+async function queueQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 	const queue = db.queue<BasicTestData>('filo');
 
 	const items = randomSimple(100);
 
 	for(let item of items) await queue.enqueue(item);
 	
+	t.is(await queue.count(), 100);
+
 	let highCount = await queue.query({ count: { $gt: 10 } });
 	t.true(highCount.length > 0);
 	t.true(highCount.every(x => x.count > 10));
 
 	await queue.empty();
-});
+	t.is(await queue.count(), 0);
+}
 
-test(`Creates fifo stack`, async (t) => {
-	const db = new FlexelDatabase();
-	const queue = db.stack<BasicTestData>('filo');
+async function createStackTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
+	const stack = db.stack<BasicTestData>('filo');
 
 	const [ITEM_1, ITEM_2, ITEM_3] = randomSimple(3);
 
-	await queue.push(ITEM_1);
-	await queue.push(ITEM_2);
-	const first = await queue.pop();
-	await queue.push(ITEM_3);
-	const second = await queue.pop();
+	await stack.push(ITEM_1);
+	await stack.push(ITEM_2);
+	t.is(await stack.count(), 2);
+	const first = await stack.pop();
+	t.is(await stack.count(), 1);
+	await stack.push(ITEM_3);
+	t.is(await stack.count(), 2);
+	const second = await stack.pop();
+	t.is(await stack.count(), 1);
 
 	t.deepEqual(first, ITEM_2);
 	t.deepEqual(second, ITEM_3);
-});
+}
 
-test(`Stack can peek`, async (t) => {
-	const db = new FlexelDatabase();
+async function stackPeekTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
 	const queue = db.stack<BasicTestData>('filo');
 
 	const [ITEM_1, ITEM_2] = randomSimple(2);
@@ -152,11 +215,29 @@ test(`Stack can peek`, async (t) => {
 
 	t.deepEqual(peek1, ITEM_1);
 	t.deepEqual(peek2, ITEM_1);
-});
+}
 
-test(`Table provides static typing`, async (t) => {
+async function stackQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
+	const stack = db.stack<BasicTestData>('filo');
+
+	const items = randomSimple(100);
+
+	for(let item of items) await stack.push(item);
+	
+	t.is(await stack.count(), 100);
+
+	let highCount = await stack.query({ count: { $gt: 10 } });
+	t.true(highCount.length > 0);
+	t.true(highCount.every(x => x.count > 10));
+
+	await stack.empty();
+	t.is(await stack.count(), 0);
+}
+
+async function tableStaticTypingTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
 	const fillCount = 1000;
-	const db = new FlexelDatabase();
+	const db = getDb();
 	const table = db.table<BasicTestData>('table-test', 'name');
 
 	const items = randomSimple(fillCount);
@@ -181,11 +262,11 @@ test(`Table provides static typing`, async (t) => {
 
 	let noQuery = await table.query({});
 	t.is(noQuery.length, fillCount);
-});
+}
 
-test(`Supports mongodb queries`, async t => {
+async function simpleQueryTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
 	const fillCount = 20;
-	const db = new FlexelDatabase();
+	const db = getDb();
 	const table = db.table<BasicTestData>('table-test', 'name');
 
 	const items = randomSimple(fillCount);
@@ -204,11 +285,11 @@ test(`Supports mongodb queries`, async t => {
 	let enabledAndHighCount = await table.query({ enabled: true, count: { $gt: 10 } });
 	t.true(enabledAndHighCount.length > 0);
 	t.true(enabledAndHighCount.every(x => x.enabled && x.count > 10));
-});
+}
 
-test(`Supports complex $and queries`, async t => {
+async function complexQueryTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
 	const fillCount = 20;
-	const db = new FlexelDatabase();
+	const db = getDb();
 	const table = db.table<BasicTestData>('table-test', 'name');
 
 	const items = randomSimple(fillCount);
@@ -227,7 +308,19 @@ test(`Supports complex $and queries`, async t => {
 	midCount = await table.query({ count: { $gt: 7, $lte: 14 } });
 	t.true(midCount.length > 0);
 	t.true(midCount.every(x => x.count > 7 && x.count <= 14));
-});
+}
+
+function inMemDb() {
+	return new FlexelDatabase();
+}
+
+function onDiskDb(path?: string, logger?: debug.IDebugger) {
+	return new FlexelDatabase(path || getFilePath(), logger);
+}
+
+function getFilePath() {
+	return basetempDbPath + (Math.floor(Math.random() * 9000) + 1000);
+}
 
 function randomDate() {
 	let ms = Math.floor(Math.random() * 200000000) - 100000000;

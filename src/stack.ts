@@ -1,5 +1,5 @@
 import { AbstractDatabase, StreamItem, AbstractStack, Query } from './models';
-import { streamForEach, getTime, streamToArray, createLogger, Logger } from './utils';
+import { getTime, streamToArray, createLogger, Logger } from './utils';
 
 const defaultLogger = createLogger('stack');
 
@@ -51,8 +51,7 @@ export class FlexelStack<T> implements AbstractStack<T> {
 	}
 
 	public async empty(): Promise<void> {
-		this._log(`Emptying queue!`);
-		await streamForEach<T>(this._db.createReadStream(), item => this._db.del(item.key));
+		await this._db.empty();
 	}
 
 	private async _peek(): Promise<StreamItem<T>> {

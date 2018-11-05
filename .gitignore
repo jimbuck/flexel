@@ -36,3 +36,4 @@ typings
 # Project Specific
 dist
 .nyc_output
+temp

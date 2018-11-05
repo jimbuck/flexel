@@ -1,5 +1,7 @@
+import { Writable, } from 'stream';
 const debug = require('debug');
 const toArray = require('stream-to-array');
+const streamEach = require('stream-each');
 
 import { StreamItem } from './models';
 
@@ -18,9 +20,10 @@ export function getTime(): number {
 	return sec * 1000000000 + nano;
 }
 
-export function dePromise() {
-	let resolve, reject;
-	let promise = new Promise((res, rej) => {
+export function dePromise<T=void>() {
+	let resolve: (value?: T | PromiseLike<T>) => void;
+	let reject: (reason?: any) => void;
+	let promise = new Promise<T>((res, rej) => {
 		resolve = res;
 		reject = rej;
 	});
@@ -28,16 +31,15 @@ export function dePromise() {
 	return { promise, resolve, reject };
 }
 
-export async function streamForEach<T>(stream: NodeJS.ReadableStream, action: (item: StreamItem<T>) => any): Promise<void> {
-	let actionsDone = Promise.resolve();
-	const { promise: streamDone, resolve: streamDoneResolve, reject: streamDoneReject } = dePromise();
-
-	stream.on('data', item => actionsDone = actionsDone.then(() => action(item)));
-	stream.on('error', streamDoneReject);
-	stream.on('end', streamDoneResolve);
-	stream.resume();
-
-	await Promise.all([streamDone, actionsDone]);
+export function streamForEach<T>(stream: NodeJS.ReadableStream, action: (item: T) => any): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		streamEach(stream, (item: T, next: () => void) => {
+			Promise.resolve(action(item)).then(next);
+		}, (err: any) => {
+			if (err) reject(err);
+			else resolve();
+		});
+	});
 }
 
 export function streamToArray<T>(stream: NodeJS.ReadableStream) {

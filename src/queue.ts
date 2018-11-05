@@ -1,6 +1,6 @@
 
 import { AbstractDatabase, AbstractQueue, StreamItem, Query } from './models';
-import { getTime, streamForEach, streamToArray, createLogger, Logger } from './utils';
+import { getTime, streamToArray, createLogger, Logger } from './utils';
 
 const defaultLogger = createLogger('queue');
 
@@ -51,8 +51,7 @@ export class FlexelQueue<T> implements AbstractQueue<T> {
 	}
 
 	public async empty(): Promise<void> {
-		this._log(`Emptying queue!`);
-		await streamForEach<T>(this._db.createReadStream(), item => this._db.del(item.key));
+		await this._db.empty();
 	}
 
 	private async _peek(): Promise<StreamItem<T>> {

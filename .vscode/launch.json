@@ -16,11 +16,31 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Current Test File",
-      "program": "${workspaceRoot}/node_modules/ava/profile.js",
+      "name": "Launch E2E Tests",
+			"program": "${workspaceRoot}/node_modules/ava/profile.js",
+			"sourceMaps": true,
+			"outputCapture": "std",
       "args": [
         "--serial",
-        "${workspaceRoot}\\dist\\${fileBasenameNoExtension}.js"
+        "${workspaceRoot}\\dist\\e2e.spec.js"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "skipFiles": [
+        "<node_internals>/**/*.js"
+      ]
+		},
+		{
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Util Tests",
+			"program": "${workspaceRoot}/node_modules/ava/profile.js",
+			"sourceMaps": true,
+			"outputCapture": "std",
+      "args": [
+        "--serial",
+        "${workspaceRoot}\\dist\\utils.spec.js"
       ],
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"

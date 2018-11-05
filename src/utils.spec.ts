@@ -1,6 +1,7 @@
+import { Readable, Writable } from 'stream';
 import { test } from 'ava';
 
-import { advancedJsonEncoding } from './utils';
+import { advancedJsonEncoding, streamForEach } from './utils';
 
 test(`advancedJsonEncoding correctly serializes raw dates`, t => {
 	const date = new Date();
@@ -43,3 +44,27 @@ test(`advancedJsonEncoding correctly deserializes deeply nested dates`, t => {
 	const actualObj = advancedJsonEncoding.decode(json);
 	t.deepEqual(actualObj, EXPECTED_OBJ);
 });
+
+test(`streamForEach iterates through all items`, async t => {
+	const expectedCount = 10;
+	const stream = createStream(expectedCount);
+	let actualValues: number[] = [];
+	await streamForEach<number>(stream, num => {
+		actualValues.push(num);
+	});
+
+	t.is(actualValues.length, expectedCount);
+});
+
+function createStream(count: number) {
+	let items = Array(count).fill(0).map((v, i) => i);
+	const stream = new Readable({
+		objectMode: true,
+		read() {
+			let item = items.shift();
+			this.push(typeof item !== 'number' ? null : item);
+		}
+	});
+
+	return stream;
+}

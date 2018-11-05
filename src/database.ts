@@ -1,17 +1,18 @@
-import { LevelUp, LevelUpConstructor } from 'levelup';
-const level: LevelUpConstructor = require('level');
-const levelmem = require('level-mem');
+import levelup, { LevelUp } from 'levelup';
+import leveldown from 'leveldown';
+import encoding from 'encoding-down';
+import memdown from 'memdown';
 const levelQuery = require('level-queryengine');
 const jsonQueryEngine = require('jsonquery-engine');
 
 type SublevelFactory = (db: LevelUp, namespace: string, opts?: {}) => LevelUp;
 const sublevel: SublevelFactory = require('subleveldown');
 
-import { AbstractDatabase, ReadStreamOptions, Query } from './models';
+import { AbstractDatabase, ReadStreamOptions, Query, StreamItem } from './models';
 import { FlexelTable } from './table';
 import { FlexelQueue } from './queue';
 import { FlexelStack } from './stack';
-import { advancedJsonEncoding, createLogger, Logger, isLogger } from './utils';
+import { advancedJsonEncoding, createLogger, Logger, isLogger, streamForEach } from './utils';
 
 const defaultLogger = createLogger('database');
 
@@ -26,27 +27,36 @@ export class FlexelDatabase implements AbstractDatabase {
 	constructor();
 	/**
 	 * Creates a flexel instance from an in-memory leveldown store.
+	 * 
+	 * @param logger The debug logger to use for diagnostics.
 	 */
 	constructor(logger: Logger);
 	/**
 	 * Creates a flexel instance from the path to a leveldown store.
 	 *
-	 * @param {string} path The path to the database.
+	 * @param path The path to the database.
 	 */
 	constructor(path: string);
 	/**
 	 * Creates a flexel instance from the path to a leveldown store.
 	 *
-	 * @param {string} path The path to the database.
+	 * @param path The path to the database.
+	 * @param logger The debug logger to use for diagnostics.
 	 */
 	constructor(path: string, logger: Logger);
 	/**
 	 * Creates a flexel instance using the provided LevelUp instance.
 	 *
-	 * @param {LevelUp} db The levelup instance.
+	 * @param db The levelup instance.
 	 */
 	constructor(db: LevelUp);
-
+	/**
+	 * Creates a flexel instance using the provided LevelUp instance.
+	 *
+	 * @param db The levelup instance.
+	 * @param logger The debug logger to use for diagnostics.
+	 */
+	constructor(db: LevelUp, logger: Logger);
 	constructor(path?: LevelUp | string | Logger, logger?: Logger) {
 		if (!new.target) return new FlexelDatabase(path as any, logger);
 	
@@ -59,10 +69,10 @@ export class FlexelDatabase implements AbstractDatabase {
 
 		if (!path) {
 			this._log(`Creating in-memory database...`);
-			db = levelmem(null, { valueEncoding: advancedJsonEncoding });
+			db = levelup(encoding(memdown(), { valueEncoding: advancedJsonEncoding }));
 		} else if (typeof path === 'string') {
 			this._log(`Creating/Loading database at "${path}"...`);
-			db = level(path, { valueEncoding: advancedJsonEncoding });
+			db = levelup(encoding(leveldown(path), { valueEncoding: advancedJsonEncoding }));
 		} else {
 			this._log(`Using provided database...`);
 			db = path as any;
@@ -82,7 +92,7 @@ export class FlexelDatabase implements AbstractDatabase {
 		return new Promise<TValue>((resolve, reject) => {
 			this._db.get(key, (err, value) => {
 				if (err) {
-					if (err.notFound) return resolve(null);
+					if ((err as any).notFound) return resolve(null);
 					this._log(`get error: ${err}`);
 					return reject(err);
 				}
@@ -113,6 +123,11 @@ export class FlexelDatabase implements AbstractDatabase {
 				resolve();
 			});
 		});
+	}
+
+	public async empty(): Promise<void> {
+		this._log(`Emptying database!`);
+		await streamForEach<StreamItem<any>>(this._db.createReadStream({ reverse: true }), item => this._db.del(item.key));
 	}
 
 	public query<T>(query: Query<T>): Promise<T[]> {
