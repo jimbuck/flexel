@@ -1,3 +1,5 @@
 dist/**/*.spec.js
+src
+.vscode
 .nyc_output
 coverage
