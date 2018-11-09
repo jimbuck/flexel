@@ -1,3 +1,4 @@
+import { mkdir } from 'fs';
 import { join as joinPath } from 'path';
 import { test, GenericTestContext, Context } from 'ava';
 import debug = require('debug');
@@ -5,7 +6,7 @@ import debug = require('debug');
 import FlexelDatabase from '.';
 import { LevelUp } from 'levelup';
 
-const basetempDbPath = joinPath(__dirname, '../temp/db-');
+const tempPath = joinPath(__dirname, '..', 'temp');
 
 type DbFactory = () => FlexelDatabase;
 
@@ -27,6 +28,13 @@ interface ComplexTestData {
 		items: BasicTestData[]
 	}
 }
+
+test.before.cb(`Create temp folder`, t => {
+	mkdir(tempPath, err => {
+		if (err && err.code !== 'EEXIST') t.fail(JSON.stringify(err));
+		t.end();
+	});
+});
 
 test(`Accepts various constructors`, t => {
 	const logger = debug('flexel-tests');
@@ -168,7 +176,7 @@ async function queueCountQueryEmptyTest (t: GenericTestContext<Context<any>>, ge
 	
 	t.is(await queue.count(), 100);
 	const highCountNum = await queue.count({ count: { $gt: 10 } });
-	t.true(highCountNum > 40 && highCountNum < 60);
+	t.true(highCountNum > 0 && highCountNum < 100);
 
 	let highCount = await queue.query({ count: { $gt: 10 } });
 	t.true(highCount.length > 0);
@@ -232,7 +240,7 @@ async function stackCountQueryEmptyTest (t: GenericTestContext<Context<any>>, ge
 	
 	t.is(await stack.count(), 100);
 	const highCountNum = await stack.count({ count: { $gt: 10 } });
-	t.true(highCountNum > 40 && highCountNum < 60);
+	t.true(highCountNum > 0 && highCountNum < 100);
 
 	let highCount = await stack.query({ count: { $gt: 10 } });
 	t.true(highCount.length > 0);
@@ -281,7 +289,7 @@ async function tableCountQueryEmptyTest(t: GenericTestContext<Context<any>>, get
 
 	t.is(await table.count(), 100);
 	const highCountNum = await table.count({ count: { $gt: 10 } });
-	t.true(highCountNum > 40 && highCountNum < 60);
+	t.true(highCountNum > 0 && highCountNum < 100);
 
 	let highCount = await table.query({ count: { $gt: 10 } });
 	t.true(highCount.every(x => x.count > 10));
@@ -345,7 +353,7 @@ function onDiskDb(path?: string, logger?: debug.IDebugger) {
 }
 
 function getFilePath() {
-	return basetempDbPath + (Math.floor(Math.random() * 900000) + 100000);
+	return joinPath(tempPath, 'db-' + (Math.floor(Math.random() * 900000) + 100000));
 }
 
 function randomDate() {
