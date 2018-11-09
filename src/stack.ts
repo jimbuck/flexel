@@ -39,9 +39,9 @@ export class FlexelStack<T> implements AbstractStack<T> {
 		return value;
 	}
 
-	public async count() {
-		let results = await this.query({});
-		
+	public async count(predicate?: Query<T>) {
+		predicate = predicate || {};
+		let results = await this._db.query(predicate);
 		return results.length;
 	}
 

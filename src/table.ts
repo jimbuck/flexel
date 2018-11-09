@@ -1,9 +1,9 @@
 import { AbstractDatabase, Query, AbstractTable } from './models';
-import { streamToArray, createLogger, Logger } from './utils';
+import { createLogger, Logger, streamToArray } from './utils';
 
 const defaultLogger = createLogger('table');
 
-export class FlexelTable<TItem> implements AbstractTable<TItem> {
+export class FlexelTable<T> implements AbstractTable<T> {
 
 	private _db: AbstractDatabase;
 	private _key: string;
@@ -15,23 +15,23 @@ export class FlexelTable<TItem> implements AbstractTable<TItem> {
 		this._log = logger || defaultLogger;
 	}
 
-	public get(): Promise<TItem[]>;
-	public get(key: string): Promise<TItem>;
-	public async get(key?: string): Promise<TItem | TItem[]> {
-		if (typeof key === 'undefined') {
-			this._log(`Getting all items...`);
-			let arr = await streamToArray<TItem>(this._db.createReadStream());
-			return arr.map(si => si.value);
+	public get(): Promise<T[]>;
+	public get(key: string): Promise<T>;
+	public async get(key?: string): Promise<T | T[]> {
+		if (typeof key === 'string') {
+			this._log(`Getting item with key '${key}'...`);
+			return this._db.get<T>(key);
 		}
 
-		this._log(`Getting item with key '${key}'...`);
-		return await this._db.get<TItem>(key);
+		this._log(`Getting all items...`);
+		let arr = await streamToArray<T>(this._db.createReadStream());
+		return arr.map(si => si.value);
 	}
 
-	public async put(item: TItem): Promise<TItem> {
+	public async put(item: T): Promise<T> {
 		const key = (item as any)[this._key];
 		this._log(`Putting item with key '${key}'...`);
-		await this._db.put<TItem>(key, item);
+		await this._db.put<T>(key, item);
 		return item;
 	}
 
@@ -40,18 +40,18 @@ export class FlexelTable<TItem> implements AbstractTable<TItem> {
 		await this._db.del(key);
 	}
 
+	public query(query: Query<T>): Promise<T[]> {
+		this._log(`Querying items...`);
+		return this._db.query<T>(query);
+	}
+
 	public async empty(): Promise<void> {
 		await this._db.empty();
 	}
 
-	public async count() {
-		let results = await this.query({});
-		
+	public async count(predicate?: Query<T>) {
+		predicate = predicate || {};
+		let results = await this.query(predicate);
 		return results.length;
-	}
-
-	public query(query: Query<TItem>): Promise<TItem[]> {
-		this._log(`Querying: ${JSON.stringify(query)}`);
-		return this._db.query(query);
 	}
 }

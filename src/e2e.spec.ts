@@ -55,8 +55,8 @@ test(`OnDisk - Creates filo queue`, createQueueTest, onDiskDb);
 test(`InMem  - Queue can peek`, queuePeekTest, inMemDb);
 test(`OnDisk - Queue can peek`, queuePeekTest, onDiskDb);
 
-test(`InMem  - Queue can query and empty`, queueQueryEmptyTest, inMemDb);
-test(`OnDisk - Queue can query and empty`, queueQueryEmptyTest, onDiskDb);
+test(`InMem  - Queue can count, query, and empty`, queueCountQueryEmptyTest, inMemDb);
+test(`OnDisk - Queue can count, query, and empty`, queueCountQueryEmptyTest, onDiskDb);
 
 test(`InMem  - Creates fifo stack`, createStackTest, inMemDb);
 test(`OnDisk - Creates fifo stack`, createStackTest, onDiskDb);
@@ -64,11 +64,14 @@ test(`OnDisk - Creates fifo stack`, createStackTest, onDiskDb);
 test(`InMem  - Stack can peek`, stackPeekTest, inMemDb);
 test(`OnDisk - Stack can peek`, stackPeekTest, onDiskDb);
 
-test(`InMem  - Stack can query and empty`, stackQueryEmptyTest, inMemDb);
-test(`OnDisk - Stack can query and empty`, stackQueryEmptyTest, onDiskDb);
+test(`InMem  - Stack can count, query, and empty`, stackCountQueryEmptyTest, inMemDb);
+test(`OnDisk - Stack can count, query, and empty`, stackCountQueryEmptyTest, onDiskDb);
 
 test(`InMem  - Table provides static typing`, tableStaticTypingTest, inMemDb);
 test(`OnDisk - Table provides static typing`, tableStaticTypingTest, onDiskDb);
+
+test(`InMem  - Table can count, query, and empty`, tableCountQueryEmptyTest, inMemDb);
+test(`OnDisk - Table can count, query, and empty`, tableCountQueryEmptyTest, onDiskDb);
 
 test(`InMem  - Supports simple queries`, simpleQueryTest, inMemDb);
 test(`OnDisk - Supports simple queries`, simpleQueryTest, onDiskDb);
@@ -155,7 +158,7 @@ async function queuePeekTest (t: GenericTestContext<Context<any>>, getDb: DbFact
 	t.deepEqual(peek2, ITEM_2);
 }
 
-async function queueQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+async function queueCountQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
 	const db = getDb();
 	const queue = db.queue<BasicTestData>('filo');
 
@@ -164,6 +167,8 @@ async function queueQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: 
 	for(let item of items) await queue.enqueue(item);
 	
 	t.is(await queue.count(), 100);
+	const highCountNum = await queue.count({ count: { $gt: 10 } });
+	t.true(highCountNum > 40 && highCountNum < 60);
 
 	let highCount = await queue.query({ count: { $gt: 10 } });
 	t.true(highCount.length > 0);
@@ -217,7 +222,7 @@ async function stackPeekTest (t: GenericTestContext<Context<any>>, getDb: DbFact
 	t.deepEqual(peek2, ITEM_1);
 }
 
-async function stackQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+async function stackCountQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
 	const db = getDb();
 	const stack = db.stack<BasicTestData>('filo');
 
@@ -226,6 +231,8 @@ async function stackQueryEmptyTest (t: GenericTestContext<Context<any>>, getDb: 
 	for(let item of items) await stack.push(item);
 	
 	t.is(await stack.count(), 100);
+	const highCountNum = await stack.count({ count: { $gt: 10 } });
+	t.true(highCountNum > 40 && highCountNum < 60);
 
 	let highCount = await stack.query({ count: { $gt: 10 } });
 	t.true(highCount.length > 0);
@@ -262,6 +269,25 @@ async function tableStaticTypingTest (t: GenericTestContext<Context<any>>, getDb
 
 	let noQuery = await table.query({});
 	t.is(noQuery.length, fillCount);
+}
+
+async function tableCountQueryEmptyTest(t: GenericTestContext<Context<any>>, getDb: DbFactory) {
+	const db = getDb();
+	const table = db.table<BasicTestData>('filo', 'name');
+
+	const items = randomSimple(100);
+
+	for (let item of items) await table.put(item);
+
+	t.is(await table.count(), 100);
+	const highCountNum = await table.count({ count: { $gt: 10 } });
+	t.true(highCountNum > 40 && highCountNum < 60);
+
+	let highCount = await table.query({ count: { $gt: 10 } });
+	t.true(highCount.every(x => x.count > 10));
+
+	await table.empty();
+	t.is(await table.count(), 0);
 }
 
 async function simpleQueryTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {

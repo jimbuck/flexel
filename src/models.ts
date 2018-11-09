@@ -37,6 +37,7 @@ export interface AbstractTable<T> {
 	del(key: string): Promise<void>;
 	empty(): Promise<void>;
 	count(): Promise<number>;
+	count(predicate: Query<T>): Promise<number>;
 	query(query: Query<T>): Promise<T[]>;
 }
 
@@ -45,6 +46,7 @@ export interface AbstractQueue<T> {
 	dequeue(): Promise<T>;
 	peek(): Promise<T>;
 	count(): Promise<number>;
+	count(predicate: Query<T>): Promise<number>;
 	query(query: Query<T>): Promise<T[]>;
 	empty(): Promise<void>;
 }
@@ -54,6 +56,7 @@ export interface AbstractStack<T> {
 	pop(): Promise<T>;
 	peek(): Promise<T>;
 	count(): Promise<number>;
+	count(predicate: Query<T>): Promise<number>;
 	query(query: Query<T>): Promise<T[]>;
 	empty(): Promise<void>;
 }
