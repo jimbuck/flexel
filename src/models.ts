@@ -42,7 +42,7 @@ export interface AbstractTable<T> {
 }
 
 export interface AbstractQueue<T> {
-	enqueue(item: T): Promise<T>;
+	enqueue(item: T): Promise<void>;
 	dequeue(): Promise<T>;
 	peek(): Promise<T>;
 	count(): Promise<number>;
@@ -52,7 +52,7 @@ export interface AbstractQueue<T> {
 }
 
 export interface AbstractStack<T> {
-	push(item: T): Promise<T>;
+	push(item: T): Promise<void>;
 	pop(): Promise<T>;
 	peek(): Promise<T>;
 	count(): Promise<number>;

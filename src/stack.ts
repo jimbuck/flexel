@@ -14,12 +14,10 @@ export class FlexelStack<T> implements AbstractStack<T> {
 		this._log = logger || defaultLogger;
 	}
 
-	public async push(item: T): Promise<T> {
+	public async push(item: T): Promise<void> {
 		const newId = getTime();
 		this._log(`Pushing item ${newId}`);
 		await this._db.put<T>(newId, item);
-
-		return item;
 	}
 
 	public async pop(): Promise<T> {

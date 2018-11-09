@@ -14,12 +14,10 @@ export class FlexelQueue<T> implements AbstractQueue<T> {
 		this._log = logger || defaultLogger;
 	}
 
-	public async enqueue(item: T): Promise<T> {
+	public async enqueue(item: T): Promise<void> {
 		const newId = getTime();
 		this._log(`Enqueuing item ${newId}`);
 		await this._db.put<T>(newId, item);
-
-		return item;
 	}
 
 	public async dequeue(): Promise<T> {
