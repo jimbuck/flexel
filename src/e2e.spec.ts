@@ -146,6 +146,8 @@ async function queuePeekTest (t: GenericTestContext<Context<any>>, getDb: DbFact
 	const db = getDb();
 	const queue = db.queue<BasicTestData>('filo');
 
+	t.is(await queue.peek(), null);
+
 	const [ITEM_1, ITEM_2] = randomSimple(2);
 
 	await queue.enqueue(ITEM_1);
@@ -208,23 +210,25 @@ async function createStackTest (t: GenericTestContext<Context<any>>, getDb: DbFa
 
 async function stackPeekTest (t: GenericTestContext<Context<any>>, getDb: DbFactory) {
 	const db = getDb();
-	const queue = db.stack<BasicTestData>('filo');
+	const stack = db.stack<BasicTestData>('filo');
+
+	t.is(await stack.peek(), null);
 
 	const [ITEM_1, ITEM_2] = randomSimple(2);
 
-	await queue.push(ITEM_1);
-	await queue.push(ITEM_2);
+	await stack.push(ITEM_1);
+	await stack.push(ITEM_2);
 
-	let peek1 = await queue.peek();
-	let peek2 = await queue.peek();
+	let peek1 = await stack.peek();
+	let peek2 = await stack.peek();
 	t.deepEqual(peek1, ITEM_2);
 	t.deepEqual(peek2, ITEM_2);
 
-	const first = await queue.pop();
+	const first = await stack.pop();
 	t.deepEqual(first, ITEM_2);
 
-	peek1 = await queue.peek();
-	peek2 = await queue.peek();
+	peek1 = await stack.peek();
+	peek2 = await stack.peek();
 
 	t.deepEqual(peek1, ITEM_1);
 	t.deepEqual(peek2, ITEM_1);

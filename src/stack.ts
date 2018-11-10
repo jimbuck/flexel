@@ -58,7 +58,7 @@ export class FlexelStack<T> implements AbstractStack<T> {
 		try {
 			const [headItem] = await streamToArray<T>(stream);
 
-			return headItem;
+			return headItem || { key: null, value: null };
 		} catch (err) {
 			return { key: null, value: null };
 		}
