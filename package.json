@@ -32,7 +32,7 @@
 		"@types/encoding-down": "^5.0.0",
 		"@types/memdown": "^3.0.0",
 		"@types/node": "^10.12.2",
-		"ava": "^0.25.0",
+		"ava": "^5.1.0",
 		"concurrently": "^4.0.1",
 		"coveralls": "^3.0.2",
 		"nyc": "^13.1.0",
